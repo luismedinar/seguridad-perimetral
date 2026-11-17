@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tema 17 · Seguridad perimetral</title>
+<style>
+:root{
+  --bg:#140d07; --bg2:#21150b; --card:#2a1a0d; --card2:#34200f; --line:#5a3716;
+  --o1:#ff7a18; --o2:#ffa94d; --o3:#ffd8a8; --o4:#c2410c; --red:#ff4d2e;
+  --txt:#fff4e6; --mut:#dcbb9b;
+  --mono:"Cascadia Code","Cascadia Mono",Consolas,"Courier New",monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#0a0603;overflow:hidden}
+body{font-family:"Segoe UI Variable Display","Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;color:var(--txt)}
+#stage{position:absolute;left:50%;top:50%;width:1920px;height:1080px;transform-origin:0 0;overflow:hidden;
+  background:
+    radial-gradient(900px 600px at 92% -8%,rgba(255,122,24,.30),transparent 65%),
+    radial-gradient(700px 500px at -5% 105%,rgba(194,65,12,.28),transparent 65%),
+    var(--bg);}
+#stage::before{content:"";position:absolute;inset:0;opacity:.07;pointer-events:none;
+  background-image:linear-gradient(var(--o2) 1px,transparent 1px),linear-gradient(90deg,var(--o2) 1px,transparent 1px);
+  background-size:80px 80px}
+
+/* ---------- slides ---------- */
+.slide{position:absolute;inset:0;padding:120px 130px 100px;display:flex;flex-direction:column;
+  opacity:0;visibility:hidden;transform:translateX(50px) scale(.985);
+  transition:opacity .55s ease,transform .55s ease,visibility 0s .55s}
+.slide.past{transform:translateX(-50px) scale(.985)}
+.slide.active{opacity:1;visibility:visible;transform:none;transition:opacity .55s ease,transform .55s ease,visibility 0s}
+.kicker{font-size:26px;letter-spacing:.18em;text-transform:uppercase;color:var(--o2);font-weight:600;margin-bottom:14px}
+h1{font-size:128px;line-height:1.02;font-weight:800;letter-spacing:-.02em}
+h2{font-size:68px;line-height:1.08;font-weight:750;letter-spacing:-.015em;margin-bottom:44px;max-width:1500px}
+h2 em,h1 em,.hl{font-style:normal;color:var(--o1)}
+p,li{font-size:34px;line-height:1.4}
+.mut{color:var(--mut)}
+.sm{font-size:27px}
+.body{flex:1;display:flex;flex-direction:column;justify-content:center;min-height:0}
+.grid{display:grid;gap:28px}
+.g2{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(3,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}.g5{grid-template-columns:repeat(5,1fr)}
+.card{background:linear-gradient(160deg,var(--card2),var(--card));border:1.5px solid var(--line);border-radius:26px;padding:34px 34px}
+.card h3{font-size:36px;line-height:1.15;margin-bottom:10px;color:var(--o3)}
+.card p{font-size:28px;color:var(--mut);line-height:1.35}
+.card .ex{margin-top:14px;font-size:25px;color:var(--o2)}
+.ic{width:64px;height:64px;stroke:var(--o1);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;margin-bottom:18px;flex:none}
+.note{margin-top:34px;padding:22px 30px;border-left:6px solid var(--o1);background:rgba(255,122,24,.10);border-radius:0 18px 18px 0;font-size:30px}
+.note b{color:var(--o2)}
+.chip{display:inline-block;padding:10px 24px;border-radius:999px;border:1.5px solid var(--o1);color:var(--o3);font-size:27px;margin:0 12px 12px 0}
+.num{font-size:26px;font-weight:700;color:var(--o1);letter-spacing:.1em}
+
+/* entry + fragments */
+@keyframes rise{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:none}}
+.slide.active .in{animation:rise .7s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--i,0)*90ms + 180ms)}
+.f{opacity:0;transform:translateY(22px);transition:opacity .5s ease,transform .5s ease}
+.f.on{opacity:1;transform:none}
+
+/* chrome */
+#top{position:absolute;top:44px;left:130px;right:130px;display:flex;justify-content:space-between;align-items:center;z-index:5;font-size:22px;color:var(--mut);letter-spacing:.08em;text-transform:uppercase}
+#sp{padding:8px 22px;border-radius:999px;font-weight:700;letter-spacing:.06em;transition:background .4s,color .4s,opacity .4s;color:#1a0e04}
+#sp:empty{visibility:hidden}
+#sp[data-s="Gil"]{background:var(--o1)}
+#sp[data-s="Gera"]{background:var(--o3)}
+#sp[data-s="Gil y Gera"]{background:linear-gradient(90deg,var(--o1),var(--o3))}
+#bar{position:absolute;left:0;bottom:0;height:8px;background:linear-gradient(90deg,var(--o4),var(--o1),var(--o2));transition:width .5s ease;z-index:5}
+#cnt{position:absolute;right:130px;bottom:38px;font-size:22px;color:var(--mut);z-index:5;font-variant-numeric:tabular-nums}
+#nav{position:absolute;left:130px;bottom:30px;z-index:6;display:flex;gap:10px;opacity:.35;transition:opacity .3s}
+#nav:hover{opacity:1}
+#nav button{width:44px;height:44px;border-radius:50%;border:1.5px solid var(--line);background:var(--card);color:var(--o3);font-size:22px;cursor:pointer}
+.dark-chrome #top,.dark-chrome #cnt{color:#3b1d05}
+
+/* portada */
+.cover{justify-content:center}
+.cover .ring{position:absolute;right:-180px;top:50%;width:900px;height:900px;margin-top:-450px;border-radius:50%;border:2px solid rgba(255,169,77,.35)}
+.cover .ring::before,.cover .ring::after{content:"";position:absolute;border-radius:50%;border:2px solid rgba(255,122,24,.45);inset:120px}
+.cover .ring::after{inset:250px;background:radial-gradient(circle,rgba(255,122,24,.35),transparent 70%);border-color:var(--o1)}
+@keyframes pulse{0%{transform:scale(.55);opacity:.9}100%{transform:scale(1.05);opacity:0}}
+.cover .wave{position:absolute;right:-180px;top:50%;width:900px;height:900px;margin-top:-450px;border-radius:50%;border:3px solid var(--o1);animation:pulse 4s ease-out infinite}
+.cover .wave.w2{animation-delay:2s}
+.who{display:flex;gap:18px;margin-top:50px}
+.who span{font-size:32px;padding:12px 30px;border-radius:999px;font-weight:700;color:#1a0e04}
+.hint{position:absolute;left:130px;bottom:92px;font-size:22px;color:var(--mut);opacity:.8}
+kbd{font-family:var(--mono);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--card)}
+
+/* sección */
+.section{background:linear-gradient(135deg,#ff8a1f 0%,#f2600c 55%,#c2410c 100%);justify-content:center;color:#1d0f04}
+.section .kicker{color:#4a1f05}
+.section h1{font-size:140px}
+.section p{font-size:40px;max-width:1200px;margin-top:30px;color:#3b1d05}
+.section .bigno{position:absolute;right:110px;bottom:20px;font-size:520px;font-weight:800;line-height:1;color:rgba(29,15,4,.13)}
+
+/* stats */
+.stat{text-align:left}
+.stat .v{font-size:104px;font-weight:800;color:var(--o1);line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stat .v small{font-size:44px;font-weight:700;color:var(--o2)}
+.stat p{margin-top:16px}
+
+/* anillos */
+.rings{position:relative;width:560px;height:560px;flex:none}
+.rings div{position:absolute;border-radius:50%;display:flex;align-items:flex-start;justify-content:center;font-size:24px;padding-top:16px;letter-spacing:.08em;text-transform:uppercase}
+.rings .r1{inset:0;border:2px dashed var(--line);color:var(--mut)}
+.rings .r2{inset:90px;border:5px solid var(--o1);color:var(--o2);box-shadow:0 0 60px rgba(255,122,24,.35)}
+.rings .r3{inset:200px;background:var(--o1);color:#1a0e04;font-weight:800;align-items:center;padding:0;text-align:center;line-height:1.2}
+@keyframes glow{50%{box-shadow:0 0 110px rgba(255,122,24,.7)}}
+.slide.active .rings .r2{animation:glow 3s ease-in-out infinite}
+.row{display:flex;gap:70px;align-items:center}
+
+/* 5D */
+.d5 .card{padding:28px 26px;position:relative}
+.d5 .big{font-size:76px;font-weight:800;color:var(--o1);line-height:1}
+.d5 h3{font-size:38px;margin:6px 0 14px}
+.d5 p{font-size:25px}
+.d5 .tag{display:block;font-size:20px;letter-spacing:.12em;text-transform:uppercase;color:var(--o2);margin-top:14px}
+
+/* capas modelo */
+.stack{display:flex;flex-direction:column;gap:16px}
+.stack .lay{display:flex;align-items:center;gap:30px;padding:20px 34px;border-radius:20px;border:1.5px solid var(--line);background:var(--card)}
+.stack .lay b{font-size:34px;color:var(--o3);width:520px;flex:none}
+.stack .lay span{font-size:28px;color:var(--mut)}
+.stack .lay:nth-child(1){margin-right:240px}.stack .lay:nth-child(2){margin-right:180px}
+.stack .lay:nth-child(3){margin-right:120px}.stack .lay:nth-child(4){margin-right:60px}
+.stack .lay:nth-child(5){background:linear-gradient(90deg,var(--o4),var(--o1));border-color:var(--o1)}
+.stack .lay:nth-child(5) b,.stack .lay:nth-child(5) span{color:#1a0e04}
+
+/* vs */
+.vs{display:grid;grid-template-columns:1fr 110px 1fr;align-items:stretch}
+.vs .mid{display:flex;align-items:center;justify-content:center;font-size:60px;color:var(--o1);font-weight:800}
+.vs .card.hot{border-color:var(--o1);box-shadow:0 0 0 1px var(--o1),0 20px 70px rgba(255,122,24,.22)}
+.vs ul{list-style:none;margin-top:14px}
+.vs li{font-size:28px;color:var(--mut);padding-left:36px;position:relative;margin-bottom:8px}
+.vs li::before{content:"";position:absolute;left:4px;top:17px;width:14px;height:14px;border-radius:50%;background:var(--o1)}
+
+/* esquema de capas */
+.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:0;position:relative;margin-top:20px}
+.flow .node{position:relative;z-index:2;margin:0 34px;background:var(--card);border:2px solid var(--o2);border-radius:26px;padding:40px 20px;text-align:center}
+.flow .node h3{font-size:36px;color:var(--o3)}
+.flow .node p{font-size:24px;color:var(--mut);margin-top:8px}
+.flow .node .ic{margin:0 auto 14px;display:block}
+.flow .node.goal{background:var(--o1);border-color:var(--o1)}
+.flow .node.goal h3,.flow .node.goal p{color:#1a0e04}.flow .node.goal .ic{stroke:#1a0e04}
+.flow .track{position:absolute;left:12.5%;right:12.5%;top:50%;height:4px;background:var(--line);z-index:1}
+.pk{position:absolute;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;z-index:1;opacity:0}
+.pk.ok{background:var(--o3);box-shadow:0 0 22px var(--o3)}
+.pk.bad{background:var(--red);box-shadow:0 0 22px var(--red)}
+@keyframes pk-ok{0%{left:12.5%;opacity:0}6%{opacity:1}92%{opacity:1}100%{left:87.5%;opacity:0}}
+@keyframes pk-b1{0%{left:12.5%;opacity:0}8%{opacity:1}36%{left:30%;opacity:1;transform:scale(1)}42%,100%{left:30%;opacity:0;transform:scale(2.6)}}
+@keyframes pk-b2{0%{left:12.5%;opacity:0}8%{opacity:1}62%{left:55%;opacity:1;transform:scale(1)}68%,100%{left:55%;opacity:0;transform:scale(2.6)}}
+.slide.active .pk.ok{animation:pk-ok 5s linear infinite}
+.slide.active .pk.b1{animation:pk-b1 5s linear infinite 1.2s}
+.slide.active .pk.b2{animation:pk-b2 5s linear infinite 2.6s}
+.legend{display:flex;gap:50px;margin-top:46px;font-size:27px;color:var(--mut);justify-content:center}
+.legend i{display:inline-block;width:22px;height:22px;border-radius:50%;margin-right:12px;vertical-align:-3px}
+
+/* pasos */
+.steps{display:grid;grid-template-columns:repeat(5,1fr);gap:18px}
+.steps .st{background:var(--card);border:1.5px solid var(--line);border-radius:24px;padding:30px 24px;position:relative;min-height:300px}
+.steps .st .n{width:62px;height:62px;border-radius:50%;background:var(--o1);color:#1a0e04;font-weight:800;font-size:32px;display:flex;align-items:center;justify-content:center;margin-bottom:22px}
+.steps .st h3{font-size:31px;color:var(--o3);line-height:1.15;margin-bottom:12px}
+.steps .st p{font-size:25px;color:var(--mut);line-height:1.3}
+.steps .st.end{background:linear-gradient(160deg,var(--o1),var(--o4));border-color:var(--o1)}
+.steps .st.end h3,.steps .st.end p{color:#1a0e04}.steps .st.end .n{background:#1a0e04;color:var(--o2)}
+
+/* tabla */
+table{width:100%;border-collapse:separate;border-spacing:0 12px}
+th{font-size:24px;text-transform:uppercase;letter-spacing:.12em;color:var(--o2);text-align:left;padding:0 28px 6px;font-weight:600}
+td{font-size:29px;padding:22px 28px;background:var(--card);border-top:1.5px solid var(--line);border-bottom:1.5px solid var(--line);vertical-align:middle}
+td:first-child{border-left:1.5px solid var(--line);border-radius:20px 0 0 20px;color:var(--o3);font-weight:700}
+td:last-child{border-right:1.5px solid var(--line);border-radius:0 20px 20px 0}
+.v{display:inline-flex;align-items:center;gap:10px;font-weight:700;font-size:27px;padding:6px 18px;border-radius:999px;white-space:nowrap}
+.v.pass{background:rgba(255,216,168,.14);color:var(--o3);border:1.5px solid var(--o3)}
+.v.block{background:rgba(255,77,46,.16);color:#ff9d8a;border:1.5px solid var(--red)}
+td small{display:block;font-size:22px;color:var(--mut);font-weight:400;margin-top:4px}
+code,.mono{font-family:var(--mono)}
+
+/* gran cifra */
+.hero-n{font-size:260px;font-weight:800;line-height:.9;color:var(--o1);letter-spacing:-.04em}
+
+/* código */
+.code{font-family:var(--mono);background:#0c0704;border:1.5px solid var(--line);border-radius:22px;padding:34px 40px;font-size:30px;line-height:1.55;white-space:pre-wrap;color:#f3dcc4}
+.code::before{content:"● ● ●";display:block;color:var(--o4);letter-spacing:6px;font-size:20px;margin-bottom:14px}
+.k1{color:var(--o1);font-weight:700}.k2{color:var(--o2)}.k3{color:#ffe9cf}.cm{color:#9b7a5c}.al{color:var(--red);font-weight:700}
+.term{font-size:24.5px;line-height:1.42;padding:24px 34px}
+.term .f{transform:translateY(8px)}
+.term .pr{color:var(--o1)}
+.ann{display:flex;flex-direction:column;gap:18px}
+.ann div{font-size:27px;color:var(--mut);padding:16px 22px;border-left:5px solid var(--o1);background:var(--card);border-radius:0 16px 16px 0}
+.ann b{color:var(--o3);font-family:var(--mono);font-size:25px;display:block}
+
+/* quiz */
+.quiz .q,.quiz .thanks{position:absolute;left:130px;right:130px;top:150px;bottom:110px;display:flex;flex-direction:column;justify-content:center;
+  opacity:0;visibility:hidden;transform:translateY(24px);transition:opacity .5s,transform .5s,visibility 0s .5s}
+.quiz .show{opacity:1;visibility:visible;transform:none;transition:opacity .5s .15s,transform .5s .15s,visibility 0s}
+.quiz .qn{font-size:26px;letter-spacing:.16em;text-transform:uppercase;color:var(--o2);margin-bottom:18px}
+.quiz h3{font-size:62px;line-height:1.12;max-width:1500px;margin-bottom:46px}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.opts button{font:inherit;color:var(--txt);text-align:left;font-size:33px;padding:28px 34px;border-radius:22px;background:var(--card);border:2px solid var(--line);cursor:pointer;transition:all .35s}
+.opts button:hover{border-color:var(--o2)}
+.opts button b{color:var(--o1);margin-right:16px}
+.opts button.bad{opacity:.45;border-color:var(--red)}
+.opts button.ok{background:var(--o1);border-color:var(--o1);color:#1a0e04;transform:scale(1.02)}
+.opts button.ok b{color:#1a0e04}
+.quiz .why{margin-top:30px;font-size:30px;color:var(--o3);opacity:0;transition:opacity .5s}
+.quiz .rev .why{opacity:1}
+.quiz .rev button:not(.ok){opacity:.4}
+.thanks{align-items:flex-start}
+.thanks h1{font-size:170px}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute">
+<defs>
+<symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2.2 2.2L15.2 10"/></symbol>
+<symbol id="i-wall" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 9.3h18M3 14.7h18M9 4v5.3M15 9.3v5.4M9 14.7V20"/></symbol>
+<symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></symbol>
+<symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18a4.5 4.5 0 01-.5-9A6 6 0 0118 10.5 3.8 3.8 0 0117.5 18z"/></symbol>
+<symbol id="i-laptop" viewBox="0 0 24 24"><path d="M5 5h14v10H5zM2 19h20"/></symbol>
+<symbol id="i-chip" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4"/></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16v-5a6 6 0 0112 0v5l2 2H4zM10 21h4"/></symbol>
+<symbol id="i-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+<symbol id="i-video" viewBox="0 0 24 24"><rect x="3" y="7" width="12" height="10" rx="2"/><path d="M15 11l6-3v8l-6-3"/></symbol>
+<symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 00-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0012 3z"/></symbol>
+<symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3"/></symbol>
+<symbol id="i-fence" viewBox="0 0 24 24"><path d="M4 21V7l2-3 2 3v14M10 21V7l2-3 2 3v14M16 21V7l2-3 2 3v14M2 11h20M2 17h20"/></symbol>
+<symbol id="i-filter" viewBox="0 0 24 24"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></symbol>
+<symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></symbol>
+<symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></symbol>
+<symbol id="i-server" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></symbol>
+<symbol id="i-term" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.5-4.5"/></symbol>
+<symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5zM3 13l9 5 9-5"/></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 10-2.3 6.3M20 4v7h-7"/></symbol>
+<symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+<symbol id="i-net" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><path d="M12 7v5M12 12l-6 5.5M12 12l6 5.5"/></symbol>
+<symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></symbol>
+<symbol id="i-gauge" viewBox="0 0 24 24"><path d="M4 18a9 9 0 1116 0M12 14l4-5"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></symbol>
+</defs>
+</svg>
+
+<div id="stage">
+  <div id="top"><span>Tema 17 · Seguridad perimetral</span><span id="sp"></span></div>
+
+  <!-- 1 -->
+  <section class="slide cover" data-sp="">
+    <div class="ring"></div><div class="wave"></div><div class="wave w2"></div>
+    <div class="kicker in">Ciberseguridad · Tema 17</div>
+    <h1 class="in">Seguridad<br><em>perimetral</em></h1>
+    <p class="in mut" style="font-size:42px;margin-top:28px">La primera línea de defensa de la red</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="slide" data-sp="Gil">
+    <div class="kicker in">Agenda</div>
+    <h2 class="in">¿Qué vamos a ver hoy?</h2>
+    <div class="body"><div class="grid g4">
+      <div class="card in"><div class="num">01  </div><svg class="ic" style="margin-top:18px"><use href="#i-shield"/></svg><h3>Fundamentos</h3><p>Qué es, componentes, las 5D y Zero Trust</p></div>
+      <div class="card in"><div class="num">02  </div><svg class="ic" style="margin-top:18px"><use href="#i-wall"/></svg><h3>Firewalls y filtros</h3><p>Cómo deciden qué pasa y qué no</p></div>
+      <div class="card in"><div class="num">03  </div><svg class="ic" style="margin-top:18px"><use href="#i-bell"/></svg><h3>IDS / IPS</h3><p>Detectar y frenar intrusos</p></div>
+      <div class="card in"><div class="num">04  </div><svg class="ic" style="margin-top:18px"><use href="#i-term"/></svg><h3>En la práctica</h3><p>Snort + nmap + iptables, y preguntas</p></div>
+    </div></div>
+  </section>
+
+  <!-- 3 -->
+  <section class="slide" data-sp="Gil">
+    <div class="kicker in">¿Por qué importa?</div>
+    <h2 class="in">Los ataques crecen <em>más rápido</em> que las defensas</h2>
+    <div class="body"><div class="grid g2" style="gap:36px 60px">
+      <div class="stat in"><div class="v">+<span data-count="38">38</span><small> %</small></div><p class="mut">más ciberataques cada año</p></div>
+      <div class="stat in"><div class="v">$<span data-count="10.5" data-dec="1">10.5</span><small> billones USD</small></div><p class="mut">costo global del cibercrimen (2025)</p></div>
+      <div class="stat in"><div class="v"><span data-count="21.3" data-dec="1">21.3</span> → <span data-count="137.5" data-dec="1">137.5</span></div><p class="mut">mil millones USD: mercado de seguridad perimetral, 2023 → 2033</p></div>
+      <div class="stat in"><div class="v"><span data-count="4">4</span><small> %</small></div><p class="mut">de los ingresos globales: multa máxima GDPR</p></div>
+    </div></div>
+  </section>
+
+  <!-- 4 -->
+  <section class="slide" data-sp="Gil">
+    <div class="kicker in">Fundamentos</div>
+    <h2 class="in">¿Qué es la seguridad perimetral?</h2>
+    <div class="body"><div class="row">
+      <div class="rings in"><div class="r1">Internet · no confiable</div><div class="r2">Perímetro</div><div class="r3">Red<br>interna</div></div>
+      <div>
+        <p class="in" style="font-size:40px">Protege el <span class="hl">límite</span> entre la red interna (confiable) y el exterior.</p>
+        <p class="in mut" style="margin-top:24px">Como tu casa: barda, puerta con llave, alarma y cámara.</p>
+        <div class="in" style="margin-top:40px"><span class="chip">Confidencialidad</span><span class="chip">Integridad</span><span class="chip">Disponibilidad</span></div>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- 5 -->
+  <section class="slide" data-sp="Gil">
+    <div class="kicker in">El reto actual</div>
+    <h2 class="in">El perímetro ya <em>no es una sola barda</em></h2>
+    <div class="body">
+      <div class="grid g3">
+        <div class="card in"><svg class="ic"><use href="#i-laptop"/></svg><h3>Trabajo remoto</h3><p>Empleados conectados desde casa o un café</p></div>
+        <div class="card in"><svg class="ic"><use href="#i-cloud"/></svg><h3>Nube</h3><p>Los datos ya no viven solo en la oficina</p></div>
+        <div class="card in"><svg class="ic"><use href="#i-chip"/></svg><h3>IoT</h3><p>Cámaras, sensores, impresoras: cada uno es una puerta</p></div>
+      </div>
+      <div class="note in"><b>Ejemplo:</b> tu laptop en el WiFi de una cafetería sigue entrando a los sistemas de la empresa.</div>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section class="slide" data-sp="Gil">
+    <div class="kicker in">Componentes · parte física</div>
+    <h2 class="in">Lo que puedes <em>ver y tocar</em></h2>
+    <div class="body"><div class="grid g3">
+      <div class="card in"><svg class="ic"><use href="#i-fence"/></svg><h3>Barreras físicas</h3><p>Muros, vallas, puertas</p></div>
+      <div class="card in"><svg class="ic"><use href="#i-video"/></svg><h3>Vigilancia</h3><p>CCTV y sensores en tiempo real</p></div>
+      <div class="card in"><svg class="ic"><use href="#i-key"/></svg><h3>Control de acceso</h3><p>Tarjetas, biometría</p></div>
+      <div class="card in"><svg class="ic"><use href="#i-bell"/></svg><h3>Detección de intrusos</h3><p>Alarmas y dispositivos</p></div>
+      <div class="card in"><svg class="ic"><use href="#i-bulb"/></svg><h3>Iluminación</h3><p>Disuade y ayuda a las cámaras</p></div>
+      <div class="card in"><svg class="ic"><use href="#i-user"/></svg><h3>Personal de seguridad</h3><p>Evalúa y responde</p></div>
+    </div></div>
+  </section>
+
+  <!-- 7 -->
+  <section class="slide" data-sp="Gil">
+    <div class="kicker in">Componentes · parte digital</div>
+    <h2 class="in">Los mismos roles, <em>en la red</em></h2>
+    <div class="body"><div class="grid g4">
+      <div class="card in"><svg class="ic"><use href="#i-wall"/></svg><h3>Firewall</h3><p>Filtra el tráfico según reglas</p><p class="ex">≈ el guardia de la entrada</p></div>
+      <div class="card in"><svg class="ic"><use href="#i-bell"/></svg><h3>IDS / IPS</h3><p>Detecta y previene ataques</p><p class="ex">≈ la alarma</p></div>
+      <div class="card in"><svg class="ic"><use href="#i-lock"/></svg><h3>VPN</h3><p>Cifra las conexiones remotas</p><p class="ex">≈ un túnel privado</p></div>
+      <div class="card in"><svg class="ic"><use href="#i-filter"/></svg><h3>Gateway web</h3><p>Filtra contenido malicioso</p><p class="ex">≈ la aduana</p></div>
+    </div></div>
+  </section>
+
+  <!-- 8 -->
+  <section class="slide" data-sp="Gil">
+    <div class="kicker in">Marco de referencia</div>
+    <h2 class="in">Las <em>5D</em> de la seguridad perimetral</h2>
+    <div class="body"><div class="grid g5 d5" style="gap:20px">
+      <div class="card f"><div class="big">01</div><h3>Disuadir</h3><p>Que el atacante ni lo intente</p><span class="tag">Ejemplo</span><p>Cámaras visibles y letreros de advertencia</p></div>
+      <div class="card f"><div class="big">02</div><h3>Detectar</h3><p>Enterarte a tiempo</p><span class="tag">Ejemplo</span><p>Sensores; en red, un IDS</p></div>
+      <div class="card f"><div class="big">03</div><h3>Retrasar</h3><p>Ganar tiempo para responder</p><span class="tag">Ejemplo</span><p>Barreras físicas; redes segmentadas</p></div>
+      <div class="card f"><div class="big">04</div><h3>Denegar</h3><p>Solo entra quien está autorizado</p><span class="tag">Ejemplo</span><p>Control de acceso; firewall</p></div>
+      <div class="card f"><div class="big">05</div><h3>Defender</h3><p>Responder a la amenaza</p><span class="tag">Ejemplo</span><p>Personal capacitado; IPS</p></div>
+    </div></div>
+  </section>
+
+  <!-- 9 -->
+  <section class="slide" data-sp="Gil">
+    <div class="kicker in">Modelos y enfoques</div>
+    <h2 class="in">Cada enfoque <em>suma una capa</em></h2>
+    <div class="body"><div class="stack">
+      <div class="lay in"><b>Ocultación</b><span>Que no te vean: infraestructura difícil de detectar</span></div>
+      <div class="lay in"><b>Perimetral tradicional</b><span>Cortafuegos que aíslan la red interna</span></div>
+      <div class="lay in"><b>Nivel de red</b><span>Contra ataques a protocolos y conexiones</span></div>
+      <div class="lay in"><b>Nivel de contenido</b><span>Bloquea malware, phishing y spam</span></div>
+      <div class="lay in"><b>Integral, de arriba abajo</b><span>Todas las capas trabajando juntas</span></div>
+    </div></div>
+  </section>
+
+  <!-- 10 -->
+  <section class="slide" data-sp="Gil">
+    <div class="kicker in">Evolución</div>
+    <h2 class="in">Del castillo con foso a <em>Zero Trust</em></h2>
+    <div class="body">
+      <div class="vs">
+        <div class="card in"><svg class="ic"><use href="#i-fence"/></svg><h3>Antes: castillo y foso</h3><ul><li>Una sola frontera</li><li>Quien ya entró es de confianza</li></ul></div>
+        <div class="mid in">→</div>
+        <div class="card hot in"><svg class="ic"><use href="#i-shield"/></svg><h3>Ahora: Zero Trust</h3><ul><li>Nunca confíes, siempre verifica</li><li>Aplica a internos y externos por igual</li></ul></div>
+      </div>
+      <div class="note f"><b>Ejemplo:</b> un hotel. Pasar la recepción no basta: tu tarjeta solo abre <b>tu</b> habitación.</div>
+      <div class="note f" style="margin-top:16px"><b>Perímetro extendido:</b> la protección también cubre dispositivos remotos y servicios en la nube.</div>
+    </div>
+  </section>
+
+  <!-- 11 -->
+  <section class="slide" data-sp="Gil">
+    <div class="kicker in">Esquema típico</div>
+    <h2 class="in">Defensa por <em>capas sucesivas</em></h2>
+    <div class="body">
+      <div class="flow in">
+        <div class="track"></div>
+        <div class="pk ok"></div><div class="pk bad b1"></div><div class="pk bad b2"></div>
+        <div class="node"><svg class="ic"><use href="#i-globe"/></svg><h3>Internet</h3><p>Tráfico bueno y malo</p></div>
+        <div class="node"><svg class="ic"><use href="#i-wall"/></svg><h3>Firewall perimetral</h3><p>+ VPN Gateway</p></div>
+        <div class="node"><svg class="ic"><use href="#i-bell"/></svg><h3>IDS / IPS</h3><p>+ Control de acceso</p></div>
+        <div class="node goal"><svg class="ic"><use href="#i-server"/></svg><h3>Red interna</h3><p>Lo que protegemos</p></div>
+      </div>
+      <div class="legend in"><span><i style="background:var(--o3)"></i>Tráfico legítimo: pasa</span><span><i style="background:var(--red)"></i>Amenaza: se detiene en una capa</span></div>
+    </div>
+  </section>
+
+  <!-- 12 -->
+  <section class="slide section" data-sp="Gera" data-dark>
+    <div class="bigno">02</div>
+    <div class="kicker in">Bloque 2 · Gera</div>
+    <h1 class="in">Firewalls y filtros<br>de contenido</h1>
+    <p class="in">El núcleo operativo del perímetro: supervisan, controlan y filtran todo lo que entra y sale.</p>
+  </section>
+
+  <!-- 13 -->
+  <section class="slide" data-sp="Gera">
+    <div class="kicker in">Evolución del firewall</div>
+    <h2 class="in">De revisar la <em>dirección</em> a revisar el <em>contenido</em></h2>
+    <div class="body"><div class="vs">
+      <div class="card in"><div class="num">CAPAS 3–4 DEL MODELO OSI</div><h3 style="margin-top:14px">1.ª generación</h3><ul><li>Reglas estáticas</li><li>Solo ve IP y puerto</li></ul><p class="ex">≈ revisa solo el sobre de la carta</p></div>
+      <div class="mid in">→</div>
+      <div class="card hot in"><div class="num">CAPA 7 · APLICACIÓN</div><h3 style="margin-top:14px">Nueva generación (NGFW)</h3><ul><li>Inspección SSL/TLS (tráfico cifrado)</li><li>Control de aplicaciones</li><li>IPS integrado</li><li>Inteligencia de amenazas en tiempo real</li></ul><p class="ex">≈ abre el sobre y lee la carta</p></div>
+    </div></div>
+  </section>
+
+  <!-- 14 -->
+  <section class="slide" data-sp="Gera">
+    <div class="kicker in">Mecanismo de operación</div>
+    <h2 class="in">¿Qué le pasa a un paquete <em>dentro del firewall</em>?</h2>
+    <div class="body"><div class="steps">
+      <div class="st f"><div class="n">1</div><h3>Tráfico entrante</h3><p>Llega el paquete</p></div>
+      <div class="st f"><div class="n">2</div><h3>Decodificación</h3><p>Se “abre” para poder leerlo</p></div>
+      <div class="st f"><div class="n">3</div><h3>Análisis de capa 7</h3><p>¿Qué aplicación es? ¿Qué trae?</p></div>
+      <div class="st f"><div class="n">4</div><h3>Verificación de políticas</h3><p>¿Las reglas lo permiten?</p></div>
+      <div class="st end f"><div class="n">5</div><h3>Bloqueo / Permitir</h3><p>La decisión final</p></div>
+    </div></div>
+  </section>
+
+  <!-- 15 -->
+  <section class="slide" data-sp="Gera">
+    <div class="kicker in">Ejemplo práctico</div>
+    <h2 class="in">¿Pasa o no pasa?</h2>
+    <div class="body"><table>
+      <tr class="in"><th>Lo que intenta entrar</th><th>Firewall clásico</th><th>NGFW</th></tr>
+      <tr class="f"><td>Visita a la banca en línea<small>HTTPS · puerto 443</small></td><td><span class="v pass">✓ Pasa</span></td><td><span class="v pass">✓ Pasa</span></td></tr>
+      <tr class="f"><td>Telnet desde Internet<small>puerto 23 · no autorizado</small></td><td><span class="v block">✕ Bloquea</span></td><td><span class="v block">✕ Bloquea</span></td></tr>
+      <tr class="f"><td>Malware oculto en HTTPS<small>puerto 443 · tráfico cifrado</small></td><td><span class="v pass">✓ Pasa</span> <small>solo ve “puerto 443”</small></td><td><span class="v block">✕ Bloquea</span> <small>inspección SSL/TLS</small></td></tr>
+      <tr class="f"><td>App no permitida por el puerto 443<small>se disfraza de tráfico web</small></td><td><span class="v pass">✓ Pasa</span> <small>el puerto está permitido</small></td><td><span class="v block">✕ Bloquea</span> <small>control de aplicaciones</small></td></tr>
+    </table></div>
+  </section>
+
+  <!-- 16 -->
+  <section class="slide" data-sp="Gera">
+    <div class="kicker in">Gestión de firewalls</div>
+    <h2 class="in">Un firewall descuidado da <em>falsa seguridad</em></h2>
+    <div class="body">
+      <div class="grid g4">
+        <div class="card in"><svg class="ic"><use href="#i-refresh"/></svg><h3>Actualizaciones constantes</h3><p>Parcheo mensual de firmware y firmas</p></div>
+        <div class="card in"><svg class="ic"><use href="#i-list"/></svg><h3>Auditoría trimestral</h3><p>Eliminar reglas obsoletas o redundantes</p></div>
+        <div class="card in"><svg class="ic"><use href="#i-ban"/></svg><h3>Mínimo privilegio</h3><p>Solo los servicios estrictamente necesarios</p></div>
+        <div class="card in"><svg class="ic"><use href="#i-net"/></svg><h3>Segmentación</h3><p>Aislar zonas críticas con VLAN</p></div>
+      </div>
+      <div class="note in"><b>Ejemplo:</b> la regla “temporal” para un proveedor que nadie volvió a cerrar.</div>
+    </div>
+  </section>
+
+  <!-- 17 -->
+  <section class="slide" data-sp="Gera">
+    <div class="kicker in">Filtros de contenido</div>
+    <h2 class="in">El firewall ve <em>por dónde</em> viaja; el filtro ve <em>qué es</em></h2>
+    <div class="body"><div class="row">
+      <div style="flex:none" class="in"><div class="hero-n"><span data-count="68">68</span><span style="font-size:120px">%</span></div><p class="mut" style="max-width:520px;margin-top:14px">de las infecciones por malware se previenen, según Fortinet</p></div>
+      <div class="grid" style="flex:1;gap:20px">
+        <div class="card in"><h3>Listas dinámicas</h3><p>Clasifican sitios en tiempo real: redes sociales, malware, phishing</p></div>
+        <div class="card in"><h3>Inspección semántica</h3><p>Entiende el contexto del texto y la multimedia</p></div>
+        <div class="card in"><h3>Filtrado por DNS</h3><p>Bloquea el dominio malicioso antes de conectarte</p></div>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- 18 -->
+  <section class="slide" data-sp="Gera">
+    <div class="kicker in">Tipos de filtrado</div>
+    <h2 class="in">Cuatro filtros, <em>cuatro ejemplos</em></h2>
+    <div class="body"><table>
+      <tr class="in"><th>Tipo</th><th>Dónde opera</th><th>Ejemplo de uso</th></tr>
+      <tr class="in"><td>Web</td><td>Capa de aplicación</td><td>Bloqueo de sitios de phishing</td></tr>
+      <tr class="in"><td>Correo</td><td>SMTP / POP3 / IMAP</td><td>Detección de adjuntos maliciosos</td></tr>
+      <tr class="in"><td>DNS</td><td>Resolución de nombres</td><td>Bloqueo de dominios C&amp;C</td></tr>
+      <tr class="in"><td>Proxy</td><td>Gateway de aplicación</td><td>Control de ancho de banda</td></tr>
+    </table></div>
+  </section>
+
+  <!-- 19 -->
+  <section class="slide" data-sp="Gera">
+    <div class="kicker in">Hacia dónde van</div>
+    <h2 class="in">Firewalls <em>integrados e inteligentes</em></h2>
+    <div class="body"><div class="grid g2" style="gap:40px">
+      <div>
+        <div class="num in" style="margin-bottom:16px">SE INTEGRAN CON</div>
+        <div class="grid" style="gap:16px">
+          <div class="card in" style="padding:24px 30px"><h3>Confianza cero</h3><p>Microsegmentación y verificación continua</p></div>
+          <div class="card in" style="padding:24px 30px"><h3>Nube híbrida</h3><p>Mismas políticas en firewalls físicos y virtuales</p></div>
+          <div class="card in" style="padding:24px 30px"><h3>Cómputo en el borde</h3><p>Firewalls ligeros en dispositivos IoT</p></div>
+        </div>
+      </div>
+      <div>
+        <div class="num in" style="margin-bottom:16px">TENDENCIAS</div>
+        <div class="grid" style="gap:16px">
+          <div class="card in" style="padding:24px 30px"><h3>Firewalls autónomos</h3><p>ML contra amenazas zero-day</p></div>
+          <div class="card in" style="padding:24px 30px"><h3>Filtrado contextual</h3><p>Políticas según el comportamiento del usuario</p></div>
+          <div class="card in" style="padding:24px 30px"><h3>Inspección con IA</h3><p>Detección de deepfakes e intención en texto</p></div>
+        </div>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- 20 -->
+  <section class="slide section" data-sp="Gil" data-dark>
+    <div class="bigno">03</div>
+    <div class="kicker in">Bloque 3 · Gil</div>
+    <h1 class="in">Detección y prevención<br>de intrusiones</h1>
+    <p class="in">IDPS: la capa más activa del perímetro. No solo identifica amenazas, responde en tiempo real.</p>
+  </section>
+
+  <!-- 21 -->
+  <section class="slide" data-sp="Gil">
+    <div class="kicker in">IDS vs IPS</div>
+    <h2 class="in">Uno <em>avisa</em>, el otro <em>actúa</em></h2>
+    <div class="body">
+      <div class="grid g2" style="gap:40px">
+        <div class="card in"><svg class="ic"><use href="#i-bell"/></svg><div class="num">PASIVO</div><h3 style="font-size:52px;margin-top:8px">IDS</h3><p>Monitorea y genera alertas. Necesita que una persona responda.</p><p class="ex">≈ la alarma de la casa</p></div>
+        <div class="card in" style="border-color:var(--o1)"><svg class="ic"><use href="#i-ban"/></svg><div class="num">ACTIVO</div><h3 style="font-size:52px;margin-top:8px">IPS</h3><p>Bloquea solo: corta conexiones, descarta paquetes, reconfigura el firewall.</p><p class="ex">≈ el guardia que detiene al intruso</p></div>
+      </div>
+      <div class="note in"><b>¿Y el firewall?</b> Aplica reglas fijas. El IDPS analiza el <b>comportamiento</b> del tráfico.</div>
+    </div>
+  </section>
+
+  <!-- 22 -->
+  <section class="slide" data-sp="Gil">
+    <div class="kicker in">Tipos de IDPS · por dónde se instala</div>
+    <h2 class="in">¿<em>Dónde</em> vigila?</h2>
+    <div class="body"><div class="grid g3">
+      <div class="card in"><svg class="ic"><use href="#i-net"/></svg><h3>NIDS · Red</h3><p>Vigila el tráfico de red</p><p class="ex">+ Cobertura amplia, no intrusivo</p><p class="sm mut" style="margin-top:6px">− Le cuesta el tráfico cifrado</p></div>
+      <div class="card in"><svg class="ic"><use href="#i-laptop"/></svg><h3>HIDS · Host</h3><p>Vigila un equipo individual</p><p class="ex">+ Ataques internos y cambios en archivos</p><p class="sm mut" style="margin-top:6px">− Consume muchos recursos</p></div>
+      <div class="card in"><svg class="ic"><use href="#i-key"/></svg><h3>PIDS · Perimetral</h3><p>Vigila los puntos de acceso</p><p class="ex">+ Protección específica de bordes</p><p class="sm mut" style="margin-top:6px">− Alcance limitado</p></div>
+    </div></div>
+  </section>
+
+  <!-- 23 -->
+  <section class="slide" data-sp="Gil">
+    <div class="kicker in">Tipos de IDPS · por cómo detecta</div>
+    <h2 class="in">¿<em>Cómo</em> reconoce un ataque?</h2>
+    <div class="body">
+      <div class="grid g2" style="gap:40px">
+        <div class="card in"><svg class="ic"><use href="#i-search"/></svg><h3>Por firmas (SIDS)</h3><p>Compara el tráfico con una base de ataques conocidos.</p><p class="ex">≈ la lista de “los más buscados”</p><p class="sm mut" style="margin-top:8px">Limitado ante ataques zero-day</p></div>
+        <div class="card in"><svg class="ic"><use href="#i-eye"/></svg><h3>Por anomalías (AIDS)</h3><p>Aprende qué es “normal” con machine learning y detecta desviaciones.</p><p class="ex">≈ notar que alguien actúa raro</p><p class="sm mut" style="margin-top:8px">Hay que ajustarlo: genera falsos positivos</p></div>
+      </div>
+      <div class="note in"><b>Ejemplo:</b> una cuenta que siempre trabaja de 9 a 6 descarga 20 GB a las 3 a.m. No hay firma, pero es anómalo.</div>
+    </div>
+  </section>
+
+  <!-- 24 -->
+  <section class="slide" data-sp="Gil">
+    <div class="kicker in">Flujo de operación</div>
+    <h2 class="in">Un IDPS <em>por dentro</em></h2>
+    <div class="body">
+      <div class="steps" style="grid-template-columns:repeat(4,1fr)">
+        <div class="st in" style="min-height:0"><div class="n">1</div><h3>Captura de tráfico</h3><p><b class="hl">Sensores:</b> red (NIDS) o logs (HIDS)</p></div>
+        <div class="st in" style="min-height:0"><div class="n">2</div><h3>Decodificación</h3><p>Prepara los datos para analizarlos</p></div>
+        <div class="st in" style="min-height:0"><div class="n">3</div><h3>Análisis de firmas / anomalías</h3><p><b class="hl">Motor:</b> Snort o Suricata</p></div>
+        <div class="st end in" style="min-height:0"><div class="n">4</div><h3>Alerta o bloqueo</h3><p>Módulo de respuesta (IPS)</p></div>
+      </div>
+      <div class="note in"><b>Consola de gestión:</b> centraliza alertas, correlaciona eventos y genera informes.</div>
+    </div>
+  </section>
+
+  <!-- 25 -->
+  <section class="slide" data-sp="Gera">
+    <div class="kicker in">IDPS en operación · Gera</div>
+    <h2 class="in">Para que <em>de verdad funcione</em></h2>
+    <div class="body">
+      <div class="grid g4">
+        <div class="card in"><svg class="ic"><use href="#i-refresh"/></svg><h3>Firmas al día</h3><p>Actualización diaria (p. ej. Emerging Threats)</p></div>
+        <div class="card in"><svg class="ic"><use href="#i-filter"/></svg><h3>Menos falsos positivos</h3><p>Ajustar umbrales al tráfico legítimo</p></div>
+        <div class="card in"><svg class="ic"><use href="#i-layers"/></svg><h3>Integrar con SIEM</h3><p>Alertas centralizadas (p. ej. Splunk)</p></div>
+        <div class="card in"><svg class="ic"><use href="#i-gauge"/></svg><h3>Pruebas de estrés</h3><p>Medir capacidad (p. ej. Tcpreplay)</p></div>
+      </div>
+      <div class="in" style="margin-top:40px"><span class="num" style="margin-right:20px">LO QUE VIENE</span><span class="chip">ML adaptativo</span><span class="chip">Deception: señuelos para atacantes</span><span class="chip">IDPS en contenedores</span></div>
+    </div>
+  </section>
+
+  <!-- 26 -->
+  <section class="slide" data-sp="Gera">
+    <div class="kicker in">Ejemplo práctico · regla de Snort</div>
+    <h2 class="in">Detectar una <em>inyección SQL</em></h2>
+    <div class="body"><div class="row" style="align-items:stretch;gap:44px">
+      <div class="code in" style="flex:1.25"><span class="k1">alert tcp</span> <span class="k2">$EXTERNAL_NET any -> $HOME_NET 80</span> (
+  <span class="k3">msg</span>:"SQL Injection Attempt";
+  flow:established,to_server;
+  <span class="k1">content</span>:"SELECT"; nocase;
+  <span class="k1">content</span>:"FROM"; nocase;
+  classtype:web-application-attack;
+)</div>
+      <div class="ann" style="flex:1">
+        <div class="f"><b>alert tcp</b>Genera una alerta sobre tráfico TCP</div>
+        <div class="f"><b>EXTERNAL → HOME : 80</b>De afuera hacia nuestro servidor web</div>
+        <div class="f"><b>content "SELECT" / "FROM"</b>Busca palabras de SQL donde no deberían ir</div>
+        <div class="f"><b>msg</b>El texto que verá el analista</div>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- 27 -->
+  <section class="slide" data-sp="Gera">
+    <div class="kicker in">Lo aprendido, en acción</div>
+    <h2 class="in">Simulación: <em>detectar y bloquear</em> un escaneo de puertos</h2>
+    <div class="body">
+      <div class="flow in" style="grid-template-columns:repeat(3,1fr)">
+        <div class="track" style="left:16.6%;right:16.6%"></div>
+        <div class="node"><svg class="ic"><use href="#i-target"/></svg><h3>Atacante</h3><p class="mono">nmap -sS</p></div>
+        <div class="node"><svg class="ic"><use href="#i-bell"/></svg><h3>Snort</h3><p>Detecta y alerta</p></div>
+        <div class="node goal"><svg class="ic"><use href="#i-wall"/></svg><h3>iptables</h3><p>Bloquea la IP</p></div>
+      </div>
+      <div class="in" style="margin-top:44px;text-align:center"><span class="chip">1 · Verificar Snort</span><span class="chip">2 · Escribir la regla</span><span class="chip">3 · Modo IPS</span><span class="chip">4 · Atacar</span><span class="chip">5 · Bloquear</span><span class="chip">6 · Comprobar</span></div>
+    </div>
+  </section>
+
+  <!-- 28 -->
+  <section class="slide" data-sp="Gera" style="padding-top:104px">
+    <div class="kicker in">Paso a paso en la terminal</div>
+    <div class="body" style="justify-content:flex-start;margin-top:6px"><div class="code term in"><div class="f"><span class="cm"># 1 · ¿Snort está corriendo?</span>
+<span class="pr">$</span> sudo systemctl status snort
+<span class="k3">● snort.service — active (running)</span></div><div class="f"><span class="cm"># 2 · Regla en /etc/snort/rules/local.rules: 5 SYN en 10 s = escaneo</span>
+<span class="k1">alert tcp</span> any any -> $HOME_NET any (msg:"Escaneo de Puertos SOSPECHOSO"; flags:S;
+  <span class="k2">detection_filter: track by_src, count 5, seconds 10</span>; sid:1000001; rev:1;)</div><div class="f"><span class="cm"># 3 · Snort en modo IPS (-Q = inline)</span>
+<span class="pr">$</span> sudo snort -A console -q -c /etc/snort/snort.conf -i eth0 <span class="k1">-Q</span> --daq afpacket -D</div><div class="f"><span class="cm"># 4 · Desde otra terminal: el ataque simulado</span>
+<span class="pr">$</span> nmap -sS &lt;IP_objetivo&gt;</div><div class="f"><span class="cm"># 5 · Snort lo detecta → bloqueamos la IP</span>
+<span class="al">[**] Escaneo de Puertos SOSPECHOSO [**]</span>
+<span class="pr">$</span> sudo iptables -A INPUT -s &lt;IP_agresora&gt; -j <span class="k1">DROP</span></div><div class="f"><span class="cm"># 6 · Comprobar: la regla existe y el nuevo escaneo falla</span>
+<span class="pr">$</span> sudo iptables -L -v</div></div></div>
+  </section>
+
+  <!-- 29 -->
+  <section class="slide" data-sp="Gil y Gera">
+    <div class="kicker in">Cierre</div>
+    <h2 class="in">Lo que nos <em>llevamos</em></h2>
+    <div class="body"><div class="grid g2">
+      <div class="card in"><div class="num">01</div><h3 style="margin-top:10px">Ya no es una muralla</h3><p>Es un ecosistema que se adapta: nube, remoto, IoT</p></div>
+      <div class="card in"><div class="num">02</div><h3 style="margin-top:10px">Defensa por capas</h3><p>Firewall + filtros de contenido + IDPS</p></div>
+      <div class="card in"><div class="num">03</div><h3 style="margin-top:10px">Zero Trust</h3><p>Nunca confíes, siempre verifica</p></div>
+      <div class="card in"><div class="num">04</div><h3 style="margin-top:10px">La tecnología sola no basta</h3><p>Actualizar, auditar y capacitar a las personas</p></div>
+    </div></div>
+  </section>
+
+  <!-- 30 -->
+  <section class="slide quiz" data-sp="">
+    <div class="kicker in">Preguntas rápidas</div>
+
+    <div class="q" data-ans="1"><div class="qn">Pregunta 1 de 6</div><h3>¿Qué protege la seguridad perimetral?</h3>
+      <div class="opts"><button data-nc><b>A</b>Solo las computadoras de escritorio</button><button data-nc><b>B</b>El límite entre la red interna y el exterior</button><button data-nc><b>C</b>Únicamente las contraseñas</button><button data-nc><b>D</b>La velocidad del Internet</button></div>
+      <p class="why">Es la primera línea de defensa entre la red confiable e Internet.</p></div>
+
+    <div class="q" data-ans="2"><div class="qn">Pregunta 2 de 6</div><h3>¿Cuál de estas NO es una de las 5D?</h3>
+      <div class="opts"><button data-nc><b>A</b>Disuadir</button><button data-nc><b>B</b>Detectar</button><button data-nc><b>C</b>Descargar</button><button data-nc><b>D</b>Defender</button></div>
+      <p class="why">Las 5D: Disuadir, Detectar, Retrasar, Denegar y Defender.</p></div>
+
+    <div class="q" data-ans="0"><div class="qn">Pregunta 3 de 6</div><h3>¿Qué significa Zero Trust?</h3>
+      <div class="opts"><button data-nc><b>A</b>No confiar en nadie por defecto y verificar siempre</button><button data-nc><b>B</b>Confiar en todos los que ya están dentro</button><button data-nc><b>C</b>No usar firewalls</button><button data-nc><b>D</b>Cero contraseñas</button></div>
+      <p class="why">Ningún usuario o dispositivo, interno o externo, es confiable automáticamente.</p></div>
+
+    <div class="q" data-ans="3"><div class="qn">Pregunta 4 de 6</div><h3>¿En qué capa analiza el tráfico un firewall de nueva generación (NGFW)?</h3>
+      <div class="opts"><button data-nc><b>A</b>Capa 1 · Física</button><button data-nc><b>B</b>Capa 2 · Enlace</button><button data-nc><b>C</b>Solo capas 3–4</button><button data-nc><b>D</b>Capa 7 · Aplicación</button></div>
+      <p class="why">Los de primera generación se quedaban en capas 3–4 (IP y puerto).</p></div>
+
+    <div class="q" data-ans="1"><div class="qn">Pregunta 5 de 6</div><h3>¿Cuál es la diferencia entre un IDS y un IPS?</h3>
+      <div class="opts"><button data-nc><b>A</b>Son exactamente lo mismo</button><button data-nc><b>B</b>El IDS alerta; el IPS además bloquea</button><button data-nc><b>C</b>El IDS bloquea; el IPS solo alerta</button><button data-nc><b>D</b>El IPS es un tipo de VPN</button></div>
+      <p class="why">IDS = pasivo (la alarma). IPS = activo (el guardia).</p></div>
+
+    <div class="q" data-ans="2"><div class="qn">Pregunta 6 de 6</div><h3>En la práctica, ¿con qué herramienta se simuló el escaneo de puertos?</h3>
+      <div class="opts"><button data-nc><b>A</b>Snort</button><button data-nc><b>B</b>iptables</button><button data-nc><b>C</b>nmap</button><button data-nc><b>D</b>Splunk</button></div>
+      <p class="why">nmap ataca, Snort detecta, iptables bloquea.</p></div>
+
+    <div class="thanks"><h1>¡<em>Gracias</em>!</h1><p class="mut" style="font-size:44px;margin-top:20px">¿Dudas o comentarios?</p></div>
+  </section>
+
+  <div id="nav"><button data-nc id="bp" aria-label="Anterior">‹</button><button data-nc id="bn" aria-label="Siguiente">›</button></div>
+  <div id="cnt"></div>
+  <div id="bar"></div>
+</div>
+
+<script>
+(function(){
+  var stage=document.getElementById('stage');
+  var slides=[].slice.call(document.querySelectorAll('.slide'));
+  var sp=document.getElementById('sp'),cnt=document.getElementById('cnt'),bar=document.getElementById('bar');
+  var i=0,k=0;
+
+  slides.forEach(function(s){[].forEach.call(s.querySelectorAll('.in'),function(e,n){e.style.setProperty('--i',n)})});
+
+  function fit(){var sc=Math.min(innerWidth/1920,innerHeight/1080);
+    stage.style.transform='scale('+sc+') translate(-50%,-50%)';}
+  addEventListener('resize',fit);fit();
+
+  function isQuiz(s){return s.classList.contains('quiz')}
+  function maxK(s){return isQuiz(s)?s.querySelectorAll('.q').length*2:s.querySelectorAll('.f').length}
+
+  function countUp(s){[].forEach.call(s.querySelectorAll('[data-count]'),function(e){
+    var to=parseFloat(e.dataset.count),dec=+(e.dataset.dec||0),t0=null;
+    if(matchMedia('(prefers-reduced-motion:reduce)').matches){e.textContent=to.toFixed(dec);return}
+    function step(t){if(!t0)t0=t;var p=Math.min((t-t0)/1300,1);p=1-Math.pow(1-p,3);
+      e.textContent=(to*p).toFixed(dec);if(p<1&&slides[i]===s)requestAnimationFrame(step);else e.textContent=to.toFixed(dec)}
+    e.textContent=(0).toFixed(dec);requestAnimationFrame(step)})}
+
+  function render(entered){
+    slides.forEach(function(s,n){s.classList.toggle('active',n===i);s.classList.toggle('past',n<i)});
+    var s=slides[i];
+    if(isQuiz(s)){
+      var qs=[].slice.call(s.querySelectorAll('.q')),qi=Math.floor(k/2),rev=k%2===1;
+      qs.forEach(function(q,n){q.classList.toggle('show',n===qi);
+        var on=n===qi&&rev;q.classList.toggle('rev',on);
+        if(on)q.querySelectorAll('button')[+q.dataset.ans].classList.add('ok');
+        if(n===qi&&!rev)[].forEach.call(q.querySelectorAll('button'),function(b){b.classList.remove('ok','bad')})});
+      s.querySelector('.thanks').classList.toggle('show',qi>=qs.length);
+    }else{
+      [].forEach.call(s.querySelectorAll('.f'),function(e,n){e.classList.toggle('on',n<k)});
+    }
+    sp.textContent=s.dataset.sp||'';sp.dataset.s=s.dataset.sp||'';
+    stage.classList.toggle('dark-chrome',s.hasAttribute('data-dark'));
+    cnt.textContent=(i+1<10?'0':'')+(i+1)+' / '+slides.length;
+    bar.style.width=((i+1)/slides.length*100)+'%';
+    if(entered){countUp(s);try{history.replaceState(null,'','#'+(i+1))}catch(e){}}
+  }
+  function go(d){var s=slides[i];
+    if(d>0){if(k<maxK(s)){k++;render(false)}else if(i<slides.length-1){i++;k=0;render(true)}}
+    else{if(k>0){k--;render(false)}else if(i>0){i--;k=maxK(slides[i]);render(true)}}}
+  function jump(n){i=Math.max(0,Math.min(slides.length-1,n));k=0;render(true)}
+
+  addEventListener('keydown',function(e){
+    var kx=e.key;
+    if(kx==='ArrowRight'||kx===' '||kx==='PageDown'||kx==='Enter'||kx==='ArrowDown'){e.preventDefault();go(1)}
+    else if(kx==='ArrowLeft'||kx==='PageUp'||kx==='Backspace'||kx==='ArrowUp'){e.preventDefault();go(-1)}
+    else if(kx==='Home')jump(0);else if(kx==='End')jump(slides.length-1);
+    else if(kx==='f'||kx==='F'){if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen()}
+  });
+  stage.addEventListener('click',function(e){
+    var t=e.target.closest('[data-nc]');
+    if(t){
+      if(t.id==='bn')go(1);else if(t.id==='bp')go(-1);
+      else{var q=t.closest('.q');if(q&&!q.classList.contains('rev')){
+        var idx=[].indexOf.call(q.querySelectorAll('button'),t);
+        t.classList.add(idx===+q.dataset.ans?'ok':'bad')}}
+      return}
+    go(1)});
+
+  var h=parseInt(location.hash.slice(1),10);
+  if(h>=1&&h<=slides.length)i=h-1;
+  render(true);
+})();
+</script>
+</body>
+</html>
